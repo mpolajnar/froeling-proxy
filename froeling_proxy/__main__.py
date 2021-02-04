@@ -26,7 +26,7 @@ parser.add_argument("--values", help="request and print temperature values", act
 args = parser.parse_args()
 
 try:
-    froeling = Froeling(args.tt)
+    froeling = Froeling(args.tty)
 except ConnectionInitializationError as e:
     sys.stderr.write("Error connecting to TTY device: {}\n".format(e))
     sys.exit(1)
