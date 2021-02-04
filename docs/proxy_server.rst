@@ -9,7 +9,7 @@ Using the `-h` flag, usage pattern can be obtained:
 
 .. code-block:: console
 
-    $ python froeling_proxy -h                                                                                                                                   2 master!+?
+    $ python -m froeling_proxy -h                                                                                                                                   2 master!+?
     usage: froeling_proxy [-h] [--port PORT] [--state] [--values] tty
 
     Proxy for serial communication with Fröling boilers.
