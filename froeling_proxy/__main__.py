@@ -38,17 +38,17 @@ if args.state:
 
 if args.values:
     value_catalog = [
-        ("Boiler temperature (Kesseltemperatur)", [0x00, 0x00]),
-        ("Exhaust temperature (Abgastemperatur)", [0x00, 0x01]),
-        ("External temperature (Außentemperatur)", [0x00, 0x04]),
-        ("Buffer top temperature (Puffer 1 oben)", [0x00, 0x76]),
-        ("Buffer bottom temperature (Puffer 1 unten)", [0x00, 0x78]),
-        ("Hot water storage temperature (Boilertemperatur 1)", [0x00, 0x5d])
+        ("Boiler temperature (Kesseltemperatur)", [0x00, 0x00], True),
+        ("Exhaust temperature (Abgastemperatur)", [0x00, 0x01], False),
+        ("External temperature (Außentemperatur)", [0x00, 0x04], True),
+        ("Buffer top temperature (Puffer 1 oben)", [0x00, 0x76], True),
+        ("Buffer bottom temperature (Puffer 1 unten)", [0x00, 0x78], True),
+        ("Hot water storage temperature (Boilertemperatur 1)", [0x00, 0x5d], True)
     ]
     values = froeling_proxy.read_values(froeling, [byte for entry in value_catalog for byte in entry[1]])
     print("VALUES: " + values.hex())
-    for ((label, _), b1, b2) in zip(value_catalog, values[::2], values[1::2]):
-        print(label + ": " + froeling_proxy.format_temperature([b1, b2]))
+    for ((label, _, multiplied_by_2), b1, b2) in zip(value_catalog, values[::2], values[1::2]):
+        print(label + ": " + froeling_proxy.format_temperature([b1, b2], multiplied_by_2=multiplied_by_2))
 
 if args.port:
     froeling_proxy.FroelingProxyServer(args.port, froeling).start()
