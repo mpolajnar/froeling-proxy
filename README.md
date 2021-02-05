@@ -41,3 +41,12 @@ encountered, a line with an exclamation mark followed by description of the erro
 300004
 !WrongResponseHeaderError: Received: 02fd00
 ```
+
+## Release Notes
+
+* 1.0.3:
+  - fix display of exhaust temperature which was too low for a factor of 2
+  - improve robustness of the proxy server so that it does not exit due to socket errors
+* 1.0.2: First working version
+* 1.0.0: Initial release; does not work
+* 1.0.1: Attempt to fix the release; does not work
