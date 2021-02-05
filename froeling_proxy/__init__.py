@@ -60,7 +60,7 @@ def format_temperature(value_bytes, multiplied_by_2=True):
     :param multiplied_by_2: determines whether the value represents temperature multiplied by 2 or not
     :return: a string with formatted temperature
     """
-    return "{:.1f}°C".format(int.from_bytes(value_bytes, "big", signed=True) / (multiplied_by_2 * 2.0))
+    return "{:.1f}°C".format(int.from_bytes(value_bytes, "big", signed=True) / (2.0 if multiplied_by_2 else 1.0))
 
 
 class FroelingProxyServer:
