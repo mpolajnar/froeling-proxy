@@ -75,7 +75,7 @@ class Froeling:
             self.port = tty
         else:
             try:
-                self.port = Serial(tty, 57600, timeout=1)
+                self.port = Serial(tty, 57600, timeout=1, write_timeout=1)
             except SerialException as e:
                 raise ConnectionInitializationError(e)
         self.ignore_crc = ignore_crc

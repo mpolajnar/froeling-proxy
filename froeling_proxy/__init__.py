@@ -103,36 +103,55 @@ class FroelingProxyServer:
         """
         self.selector = selectors.DefaultSelector()
 
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            s.bind(("", self.port))
-            s.listen()
-            s.setblocking(False)
-            self.selector.register(s, selectors.EVENT_READ, data=None)
-            while True:
-                events = self.selector.select(timeout=None)
-                for key, mask in events:
-                    if key.data is None:
-                        self._accept_connection(key.fileobj)
-                    else:
-                        self._service_connection(key, mask)
+        try:
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                s.bind(("", self.port))
+                s.listen()
+                s.setblocking(False)
+                self.selector.register(s, selectors.EVENT_READ, data=None)
+                while True:
+                    events = self.selector.select(timeout=None)
+                    for key, mask in events:
+                        if key.data is None:
+                            self._accept_connection(key.fileobj)
+                        else:
+                            self._service_connection(key, mask)
+        except KeyboardInterrupt:
+            pass
 
     def _accept_connection(self, s):
-        conn, addr = s.accept()
-        conn.setblocking(False)
-        data = types.SimpleNamespace(addr=addr, inb=b'', outb=b'')
-        events = selectors.EVENT_READ | selectors.EVENT_WRITE
-        self.selector.register(conn, events, data=data)
+        try:
+            conn, addr = s.accept()
+            conn.setblocking(False)
+            data = types.SimpleNamespace(addr=addr, inb=b'', outb=b'')
+            events = selectors.EVENT_READ | selectors.EVENT_WRITE
+            self.selector.register(conn, events, data=data)
+        except Exception as e:
+            print("Error accepting TCP socket connection: {}".format(e), sys.stderr)
+            # noinspection PyBroadException
+            self._close_connection(s)
 
     def _close_connection(self, s):
-        self.selector.unregister(s)
-        s.close()
+        # noinspection PyBroadException
+        try:
+            self.selector.unregister(s)
+            s.close()
+        except Exception:
+            pass
 
     def _service_connection(self, key, mask):
         s = key.fileobj
         data = key.data
 
         if mask & selectors.EVENT_READ:
-            recv_data = s.recv(1024)
+            try:
+                recv_data = s.recv(1024)
+            except Exception as e:
+                print("Error reading from TCP socket: {}".format(e), sys.stderr)
+                # noinspection PyBroadException
+                self._close_connection(s)
+                return
             if recv_data:
                 invalid_bytes = [byte for byte in recv_data if byte not in FroelingProxyServer.VALID_INPUT_BYTES]
                 if invalid_bytes:
@@ -140,13 +159,25 @@ class FroelingProxyServer:
                     self._close_connection(s)
                 else:
                     data.inb += recv_data
-                    self._handle_requests(data)
+                    try:
+                        self._handle_requests(data)
+                    except Exception as e:
+                        print("Error handling request: {}".format(e), sys.stderr)
+                        # noinspection PyBroadException
+                        self._close_connection(s)
+                        return
             else:
                 self._close_connection(s)
 
         if mask & selectors.EVENT_WRITE:
             if data.outb:
-                sent = s.send(data.outb)
+                try:
+                    sent = s.send(data.outb)
+                except Exception as e:
+                    print("Error writing to TCP socket: {}".format(e), sys.stderr)
+                    # noinspection PyBroadException
+                    self._close_connection(s)
+                    return
                 data.outb = data.outb[sent:]
 
     def _handle_requests(self, data):
@@ -159,7 +190,11 @@ class FroelingProxyServer:
         """
         newline_index = next((i for (i, byte) in enumerate(data.inb) if byte in b'\n\r'), None)
         if newline_index is not None:
-            request = bytes.fromhex(data.inb[:newline_index].decode())
+            try:
+                request = bytes.fromhex(data.inb[:newline_index].decode())
+            except ValueError as e:
+                data.outb += b"!" + (e.__class__.__name__ + ": " + str(e)).encode("UTF-8") + b"\n"
+                request = None
             data.inb = data.inb[newline_index + 1:]
             if request:
                 try:
@@ -167,3 +202,4 @@ class FroelingProxyServer:
                     data.outb += response.hex().encode() + b"\n"
                 except (SerialPortIOError, ResponseReadError) as e:
                     data.outb += b"!" + (e.__class__.__name__ + ": " + str(e)).encode("UTF-8") + b"\n"
+
